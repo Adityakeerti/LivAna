@@ -1,0 +1,21 @@
+#docker-compose.yml — place in project root 
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: livana
+      POSTGRES_USER: livana_user
+      POSTGRES_PASSWORD: livana_local_pass
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d # runs schema.sql on first start 
+
+  valkey:
+    image: valkey/valkey:7
+    ports:
+      - '6379:6379'
+
+volumes:
+  pgdata:

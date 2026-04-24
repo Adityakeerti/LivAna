@@ -1,0 +1,618 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a; --surface: #1e2235;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --text: #f0f2ff; --text2: #9095b0; --text3: #5a5f7a;
+  --green: #2ecc7a; --green2: rgba(46,204,122,0.12);
+  --red: #ff5c5c; --red2: rgba(255,92,92,0.12);
+  --amber: #f0a500; --amber2: rgba(240,165,0,0.12);
+  --blue: #4d9cff; --blue2: rgba(77,156,255,0.12);
+  --accent: #ff6b35; --accent2: rgba(255,107,53,0.15);
+  --r: 10px; --r2: 14px;
+}
+
+body { background: #1a1d27; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 24px 12px; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+.phone-frame {
+  width: 375px; height: 780px; background: var(--bg); border-radius: 40px;
+  border: 2px solid rgba(255,255,255,0.12); overflow: hidden;
+  display: flex; flex-direction: column; position: relative;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+}
+
+/* Status bar */
+.status-bar {
+  height: 44px; background: var(--bg2); display: flex; align-items: center;
+  justify-content: space-between; padding: 0 20px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.sb-left { font-size: 11px; font-weight: 600; color: var(--text); }
+.sb-right { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text2); }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+/* Top header */
+.top-header {
+  background: var(--bg2); padding: 12px 16px 10px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.header-row { display: flex; align-items: center; justify-content: space-between; }
+.logo-wrap { display: flex; align-items: center; gap: 8px; }
+.logo-emoji { font-size: 20px; }
+.logo-text { font-size: 14px; font-weight: 700; color: var(--text); }
+.logo-badge { font-size: 9px; color: var(--accent); background: var(--accent2); padding: 2px 6px; border-radius: 20px; }
+.header-icons { display: flex; gap: 10px; }
+.icon-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; }
+.notif-red { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; background: var(--red); border-radius: 50%; border: 1px solid var(--bg2); }
+.open-chip { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+.open-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+.open-label { font-size: 11px; color: var(--green); font-weight: 500; }
+.open-time { font-size: 11px; color: var(--text3); }
+.close-btn { margin-left: auto; font-size: 10px; background: var(--red2); color: var(--red); padding: 3px 10px; border-radius: 20px; cursor: pointer; border: 1px solid rgba(255,92,92,0.2); }
+
+/* Scrollable content */
+.content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.content::-webkit-scrollbar { display: none; }
+
+/* Panels */
+.panel { display: none; padding: 14px 14px 80px; }
+.panel.active { display: block; }
+
+/* Stat cards */
+.stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 12px; }
+.stat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+.stat-val { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
+.stat-sub { font-size: 10px; color: var(--text2); margin-top: 4px; }
+.stat-up { color: var(--green); }
+.stat-down { color: var(--red); }
+
+/* Section */
+.sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sec-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.sec-link { font-size: 10px; color: var(--blue); cursor: pointer; }
+
+/* Order card */
+.order-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 12px; margin-bottom: 8px; }
+.order-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.order-id { font-size: 11px; font-weight: 600; color: var(--text); }
+.badge { font-size: 9px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+.badge.pending { background: var(--amber2); color: var(--amber); }
+.badge.confirmed { background: var(--blue2); color: var(--blue); }
+.badge.preparing { background: rgba(180,100,255,0.15); color: #c47eff; }
+.badge.ready { background: var(--green2); color: var(--green); }
+.badge.delivered { background: rgba(100,200,255,0.1); color: #64c8ff; }
+.badge.cancelled { background: var(--red2); color: var(--red); }
+.order-student { font-size: 10px; color: var(--text2); margin-bottom: 4px; }
+.order-items-text { font-size: 11px; color: var(--text); }
+.order-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.order-price { font-size: 13px; font-weight: 700; color: var(--accent); }
+.order-time { font-size: 10px; color: var(--text3); }
+.order-actions { display: flex; gap: 6px; margin-top: 8px; }
+.btn-sm { padding: 5px 12px; border-radius: 8px; font-size: 10px; cursor: pointer; border: 1px solid; font-weight: 500; flex: 1; text-align: center; }
+.btn-accept { background: var(--green2); color: var(--green); border-color: rgba(46,204,122,0.25); }
+.btn-reject { background: var(--red2); color: var(--red); border-color: rgba(255,92,92,0.25); }
+.btn-ready { background: var(--blue2); color: var(--blue); border-color: rgba(77,156,255,0.25); }
+
+/* Menu items */
+.menu-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.food-img { width: 40px; height: 40px; border-radius: 10px; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.food-info { flex: 1; min-width: 0; }
+.food-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.food-cat { font-size: 10px; color: var(--text3); margin-top: 1px; display: flex; align-items: center; gap: 4px; }
+.veg-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.food-price { font-size: 12px; font-weight: 600; color: var(--accent); margin-top: 2px; }
+.food-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.toggle-pill { width: 36px; height: 20px; border-radius: 10px; background: var(--green); position: relative; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+.toggle-pill.off { background: var(--bg3); border: 1px solid var(--border2); }
+.toggle-pill::after { content:''; position:absolute; width:14px; height:14px; background:#fff; border-radius:50%; top:3px; left:3px; transition:0.2s; }
+.toggle-pill.on::after { left:19px; }
+.edit-icon { font-size: 14px; cursor: pointer; color: var(--text3); }
+
+/* Review */
+.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 12px; margin-bottom: 8px; }
+.review-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.reviewer { display: flex; align-items: center; gap: 8px; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,var(--accent),#ff9a5c); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.reviewer-name { font-size: 11px; font-weight: 600; color: var(--text); }
+.reviewer-meta { font-size: 10px; color: var(--text3); }
+.stars { color: var(--amber); font-size: 11px; }
+.review-text { font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+/* Settings */
+.settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); margin-bottom: 10px; overflow: hidden; }
+.settings-section-title { font-size: 11px; font-weight: 600; color: var(--text); padding: 10px 14px; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-key { font-size: 11px; color: var(--text2); }
+.settings-val { font-size: 11px; color: var(--text); font-weight: 500; text-align: right; max-width: 160px; }
+.settings-edit { color: var(--blue); font-size: 10px; margin-left: 4px; cursor: pointer; }
+
+/* Rating bars */
+.rating-summary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px; margin-bottom: 12px; }
+.big-rating { font-size: 32px; font-weight: 700; color: var(--amber); line-height: 1; }
+.rating-stars-big { color: var(--amber); font-size: 14px; margin: 3px 0 2px; }
+.rating-count { font-size: 10px; color: var(--text3); }
+.rating-bars { margin-top: 12px; }
+.rb-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font-size: 10px; color: var(--text2); }
+.rb-bg { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.rb-fill { height: 100%; border-radius: 3px; background: var(--amber); }
+.rb-pct { width: 24px; text-align: right; color: var(--text3); }
+
+/* Analytics */
+.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r2); padding: 14px; margin-bottom: 10px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 5px; height: 70px; }
+.bar { flex: 1; border-radius: 4px 4px 0 0; opacity: 0.8; transition: 0.2s; cursor: pointer; }
+.bar:hover { opacity: 1; }
+.bar-labels { display: flex; gap: 5px; margin-top: 4px; }
+.bar-lbl { flex: 1; text-align: center; font-size: 9px; color: var(--text3); }
+
+/* Tab filter */
+.filter-tabs { display: flex; gap: 5px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+.filter-tabs::-webkit-scrollbar { display: none; }
+.ftab { padding: 5px 12px; border-radius: 20px; font-size: 10px; cursor: pointer; color: var(--text2); background: var(--surface); border: 1px solid var(--border); white-space: nowrap; transition: 0.15s; }
+.ftab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Bottom nav */
+.bottom-nav {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 64px; background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 0 4px 8px; z-index: 10;
+}
+.nav-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 10px; border-radius: 10px; transition: 0.15s; min-width: 52px; position: relative; }
+.nav-tab:hover { background: var(--bg3); }
+.nav-tab.active { background: var(--accent2); }
+.nav-tab .icon { font-size: 18px; }
+.nav-tab .label { font-size: 9px; color: var(--text3); }
+.nav-tab.active .label { color: var(--accent); }
+.nav-badge { position: absolute; top: 4px; right: 8px; background: var(--red); color: #fff; font-size: 8px; padding: 1px 4px; border-radius: 8px; font-weight: 700; }
+
+/* Add button */
+.fab { position: absolute; bottom: 74px; right: 14px; width: 44px; height: 44px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; cursor: pointer; box-shadow: 0 4px 16px rgba(255,107,53,0.4); z-index: 11; transition: 0.15s; }
+.fab:hover { transform: scale(1.08); }
+
+/* Top menu highlights */
+.top-dishes { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
+.top-dishes::-webkit-scrollbar { display: none; }
+.dish-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+.dish-chip-name { font-size: 10px; font-weight: 500; color: var(--text); }
+.dish-chip-count { font-size: 9px; color: var(--text3); }
+</style>
+
+<div style="background:#141720;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:20px 12px;font-family:'Segoe UI',system-ui,sans-serif;">
+<div class="phone-frame">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="sb-left">9:41</div>
+    <div class="sb-right">
+      <span class="live-dot"></span>
+      <span style="color:var(--green);font-size:10px;font-weight:500">LIVE</span>
+      <span>📶</span><span>🔋</span>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <div class="top-header">
+    <div class="header-row">
+      <div class="logo-wrap">
+        <div class="logo-emoji">🍛</div>
+        <div>
+          <div class="logo-text">Maa Ki Rasoi</div>
+          <div class="logo-badge">Mess Partner</div>
+        </div>
+      </div>
+      <div class="header-icons">
+        <div class="icon-btn">🔔<span class="notif-red"></span></div>
+        <div class="icon-btn" style="background:linear-gradient(135deg,var(--accent),#ff9a5c);border:none;font-size:11px;font-weight:700;color:#fff">RS</div>
+      </div>
+    </div>
+    <div class="open-chip">
+      <span class="open-dot"></span>
+      <span class="open-label">Open</span>
+      <span class="open-time">· Since 7:00 AM</span>
+      <div class="close-btn" id="toggle-open-btn" onclick="toggleOpen()">Mark Closed</div>
+    </div>
+  </div>
+
+  <!-- Scrollable Content -->
+  <div class="content" id="main-content">
+
+    <!-- HOME -->
+    <div class="panel active" id="panel-home">
+      <div style="height:12px"></div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Today's Orders</div>
+          <div class="stat-val">38</div>
+          <div class="stat-sub"><span class="stat-up">↑ 12%</span> vs yesterday</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Revenue</div>
+          <div class="stat-val">₹4,720</div>
+          <div class="stat-sub"><span class="stat-up">↑ 8%</span> today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pending</div>
+          <div class="stat-val" style="color:var(--amber)">4</div>
+          <div class="stat-sub" style="color:var(--amber)">Needs action</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg. Rating</div>
+          <div class="stat-val">4.3</div>
+          <div class="stat-sub" style="color:var(--amber)">★★★★ 126</div>
+        </div>
+      </div>
+
+      <div class="sec-head">
+        <div class="sec-title">🔥 Top Dishes Today</div>
+      </div>
+      <div class="top-dishes">
+        <div class="dish-chip"><span style="font-size:16px">🍛</span><div><div class="dish-chip-name">Dal Makhani</div><div class="dish-chip-count">18 orders</div></div></div>
+        <div class="dish-chip"><span style="font-size:16px">🥘</span><div><div class="dish-chip-name">Full Thali</div><div class="dish-chip-count">12 orders</div></div></div>
+        <div class="dish-chip"><span style="font-size:16px">🫓</span><div><div class="dish-chip-name">Chole Bhature</div><div class="dish-chip-count">9 orders</div></div></div>
+        <div class="dish-chip"><span style="font-size:16px">☕</span><div><div class="dish-chip-name">Masala Chai</div><div class="dish-chip-count">30 orders</div></div></div>
+      </div>
+
+      <div class="sec-head">
+        <div class="sec-title">🧾 Live Orders</div>
+        <div class="sec-link" onclick="goTab('orders')">View all →</div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2214</div><span class="badge pending">Pending</span></div>
+        <div class="order-student">👤 Arjun Mehta · Room 204, Block B</div>
+        <div class="order-items-text">Dal Makhani × 1, Roti × 3</div>
+        <div class="order-footer"><div class="order-price">₹185</div><div class="order-time">2 min ago</div></div>
+        <div class="order-actions">
+          <div class="btn-sm btn-accept">✓ Accept</div>
+          <div class="btn-sm btn-reject">✕ Reject</div>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2213</div><span class="badge preparing">Preparing</span></div>
+        <div class="order-student">👤 Priya Sinha · Room 112, Block A</div>
+        <div class="order-items-text">Thali (Full) × 1, Lassi × 2</div>
+        <div class="order-footer"><div class="order-price">₹260</div><div class="order-time">8 min ago</div></div>
+        <div class="order-actions">
+          <div class="btn-sm btn-ready">Mark Ready</div>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2212</div><span class="badge ready">Ready ✓</span></div>
+        <div class="order-student">👤 Rahul Kumar · Hostel 3, Room 09</div>
+        <div class="order-items-text">Chole Bhature × 2, Chai × 1</div>
+        <div class="order-footer"><div class="order-price">₹140</div><div class="order-time">14 min ago</div></div>
+        <div class="order-actions">
+          <div class="btn-sm btn-accept">Mark Delivered</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="panel" id="panel-orders">
+      <div style="height:12px"></div>
+      <div class="filter-tabs">
+        <div class="ftab active" onclick="filterOrders(this)">All (38)</div>
+        <div class="ftab" onclick="filterOrders(this)">Pending (4)</div>
+        <div class="ftab" onclick="filterOrders(this)">Preparing (6)</div>
+        <div class="ftab" onclick="filterOrders(this)">Ready (3)</div>
+        <div class="ftab" onclick="filterOrders(this)">Delivered (25)</div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2214</div><span class="badge pending">Pending</span></div>
+        <div class="order-student">👤 Arjun Mehta · Room 204, Block B</div>
+        <div class="order-items-text">Dal Makhani × 1, Roti × 3 <span style="color:var(--text3);font-size:10px">· less oil</span></div>
+        <div class="order-footer"><div class="order-price">₹185</div><div class="order-time">2 min ago</div></div>
+        <div class="order-actions"><div class="btn-sm btn-accept">✓ Accept</div><div class="btn-sm btn-reject">✕ Reject</div></div>
+      </div>
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2213</div><span class="badge preparing">Preparing</span></div>
+        <div class="order-student">👤 Priya Sinha · Room 112, Block A</div>
+        <div class="order-items-text">Thali (Full) × 1, Lassi × 2</div>
+        <div class="order-footer"><div class="order-price">₹260</div><div class="order-time">8 min ago</div></div>
+        <div class="order-actions"><div class="btn-sm btn-ready">Mark Ready</div></div>
+      </div>
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2212</div><span class="badge ready">Ready</span></div>
+        <div class="order-student">👤 Rahul Kumar · Hostel 3, Room 09</div>
+        <div class="order-items-text">Chole Bhature × 2, Chai × 1</div>
+        <div class="order-footer"><div class="order-price">₹140</div><div class="order-time">14 min ago</div></div>
+        <div class="order-actions"><div class="btn-sm btn-accept">Mark Delivered</div></div>
+      </div>
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2211</div><span class="badge confirmed">Confirmed</span></div>
+        <div class="order-student">👤 Sneha Gupta · Room 308, Block C</div>
+        <div class="order-items-text">Paneer Butter Masala × 1, Rice, Roti × 2</div>
+        <div class="order-footer"><div class="order-price">₹220</div><div class="order-time">17 min ago</div></div>
+        <div class="order-actions"><div class="btn-sm btn-ready">Start Preparing</div></div>
+      </div>
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2210</div><span class="badge delivered">Delivered</span></div>
+        <div class="order-student">👤 Karan Verma · Hostel 1</div>
+        <div class="order-items-text">Veg Biryani × 1</div>
+        <div class="order-footer"><div class="order-price">₹130</div><div class="order-time">25 min ago</div></div>
+      </div>
+      <div class="order-card">
+        <div class="order-top"><div class="order-id">#ORD-2208</div><span class="badge cancelled">Cancelled</span></div>
+        <div class="order-student">👤 Mohit Joshi · Block D</div>
+        <div class="order-items-text">Aloo Paratha × 2, Curd</div>
+        <div class="order-footer"><div class="order-price">₹100</div><div class="order-time">40 min ago</div></div>
+      </div>
+    </div>
+
+    <!-- MENU -->
+    <div class="panel" id="panel-menu">
+      <div style="height:12px"></div>
+      <div class="filter-tabs">
+        <div class="ftab active" onclick="filterOrders(this)">All (18)</div>
+        <div class="ftab" onclick="filterOrders(this)">Veg (14)</div>
+        <div class="ftab" onclick="filterOrders(this)">Non-Veg (4)</div>
+        <div class="ftab" onclick="filterOrders(this)">Beverages (5)</div>
+      </div>
+
+      <div class="menu-item">
+        <div class="food-img">🍛</div>
+        <div class="food-info">
+          <div class="food-name">Dal Makhani</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--green)"></span>Veg · Main Course</div>
+          <div class="food-price">₹120</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="food-img">🥘</div>
+        <div class="food-info">
+          <div class="food-name">Thali (Full)</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--green)"></span>Veg · Combo</div>
+          <div class="food-price">₹180</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="food-img">🫓</div>
+        <div class="food-info">
+          <div class="food-name">Chole Bhature</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--green)"></span>Veg · Breakfast</div>
+          <div class="food-price">₹90</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="food-img">🧀</div>
+        <div class="food-info">
+          <div class="food-name">Paneer Butter Masala</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--green)"></span>Veg · Main Course</div>
+          <div class="food-price">₹150</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill off" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="food-img">🍗</div>
+        <div class="food-info">
+          <div class="food-name">Chicken Curry</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--red)"></span>Non-Veg · Main</div>
+          <div class="food-price">₹180</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="food-img">☕</div>
+        <div class="food-info">
+          <div class="food-name">Masala Chai</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--green)"></span>Veg · Beverage</div>
+          <div class="food-price">₹20</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+      <div class="menu-item">
+        <div class="food-img">🍚</div>
+        <div class="food-info">
+          <div class="food-name">Veg Biryani</div>
+          <div class="food-cat"><span class="veg-dot" style="background:var(--green)"></span>Veg · Rice</div>
+          <div class="food-price">₹130</div>
+        </div>
+        <div class="food-right">
+          <div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div>
+          <div class="edit-icon">✏️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEWS -->
+    <div class="panel" id="panel-reviews">
+      <div style="height:12px"></div>
+      <div class="rating-summary">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div>
+            <div class="big-rating">4.3</div>
+            <div class="rating-stars-big">★★★★</div>
+            <div class="rating-count">126 reviews</div>
+          </div>
+          <div class="rating-bars" style="flex:1">
+            <div class="rb-row"><span style="min-width:8px">5</span><div class="rb-bg"><div class="rb-fill" style="width:54%"></div></div><span class="rb-pct">54%</span></div>
+            <div class="rb-row"><span style="min-width:8px">4</span><div class="rb-bg"><div class="rb-fill" style="width:28%"></div></div><span class="rb-pct">28%</span></div>
+            <div class="rb-row"><span style="min-width:8px">3</span><div class="rb-bg"><div class="rb-fill" style="width:10%"></div></div><span class="rb-pct">10%</span></div>
+            <div class="rb-row"><span style="min-width:8px">2</span><div class="rb-bg"><div class="rb-fill" style="width:5%"></div></div><span class="rb-pct">5%</span></div>
+            <div class="rb-row"><span style="min-width:8px">1</span><div class="rb-bg"><div class="rb-fill" style="width:3%"></div></div><span class="rb-pct">3%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-card">
+        <div class="review-top">
+          <div class="reviewer"><div class="avatar">AK</div><div><div class="reviewer-name">Anjali Kapoor</div><div class="reviewer-meta">Dal Makhani · 2h ago</div></div></div>
+          <div class="stars">★★★★★</div>
+        </div>
+        <div class="review-text">Best dal makhani in college! Tastes just like home. Roti was soft and fresh too.</div>
+      </div>
+      <div class="review-card">
+        <div class="review-top">
+          <div class="reviewer"><div class="avatar" style="background:linear-gradient(135deg,#4d9cff,#7bb5ff)">RV</div><div><div class="reviewer-name">Rohan Varma</div><div class="reviewer-meta">Thali (Full) · 5h ago</div></div></div>
+          <div class="stars">★★★★</div>
+        </div>
+        <div class="review-text">Good value for money, generous portions. Would love more variety in desserts.</div>
+      </div>
+      <div class="review-card">
+        <div class="review-top">
+          <div class="reviewer"><div class="avatar" style="background:linear-gradient(135deg,#2ecc7a,#64e0a0)">SM</div><div><div class="reviewer-name">Swati Mishra</div><div class="reviewer-meta">Chole Bhature · Yesterday</div></div></div>
+          <div class="stars" style="color:var(--text3)">★★★<span style="opacity:0.3">★★</span></div>
+        </div>
+        <div class="review-text">Bhature was a bit oily today. Quality can be inconsistent. Service was prompt though.</div>
+      </div>
+      <div class="review-card">
+        <div class="review-top">
+          <div class="reviewer"><div class="avatar" style="background:linear-gradient(135deg,#c47eff,#9b5de5)">KS</div><div><div class="reviewer-name">Kunal Singh</div><div class="reviewer-meta">Chicken Curry · 2 days ago</div></div></div>
+          <div class="stars">★★★★★</div>
+        </div>
+        <div class="review-text">Non-veg options are great! Chicken curry was spicy and well-made. Will order again.</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-settings">
+      <div style="height:12px"></div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">⚙️ General Info</div>
+        <div class="settings-row"><span class="settings-key">Mess Name</span><span class="settings-val">Maa Ki Rasoi <span class="settings-edit">Edit</span></span></div>
+        <div class="settings-row"><span class="settings-key">Owner</span><span class="settings-val">Ramesh Sharma</span></div>
+        <div class="settings-row"><span class="settings-key">Phone</span><span class="settings-val">+91 98765 43210 <span class="settings-edit">Edit</span></span></div>
+        <div class="settings-row"><span class="settings-key">Cuisine</span><span class="settings-val">North Indian</span></div>
+        <div class="settings-row"><span class="settings-key">Capacity</span><span class="settings-val">80 seats <span class="settings-edit">Edit</span></span></div>
+        <div class="settings-row"><span class="settings-key">Location</span><span class="settings-val" style="font-size:10px">Near Gate 3, IIT, Dehradun</span></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">🕐 Meal Timings</div>
+        <div class="settings-row"><span class="settings-key">Breakfast</span><span class="settings-val">7:00 – 10:00 AM <span class="settings-edit">Edit</span></span></div>
+        <div class="settings-row"><span class="settings-key">Lunch</span><span class="settings-val">12:00 – 2:30 PM <span class="settings-edit">Edit</span></span></div>
+        <div class="settings-row"><span class="settings-key">Dinner</span><span class="settings-val">7:00 – 10:00 PM <span class="settings-edit">Edit</span></span></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">🔔 Notifications</div>
+        <div class="settings-row"><span class="settings-key">New Order Alert</span><div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div></div>
+        <div class="settings-row"><span class="settings-key">Low Stock Reminder</span><div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div></div>
+        <div class="settings-row"><span class="settings-key">New Review</span><div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div></div>
+        <div class="settings-row"><span class="settings-key">Daily Revenue Report</span><div class="toggle-pill off" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div></div>
+        <div class="settings-row"><span class="settings-key">Bulk Order Alert</span><div class="toggle-pill on" onclick="this.classList.toggle('off');this.classList.toggle('on')"></div></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">💳 Payment Methods</div>
+        <div class="settings-row"><span class="settings-key">UPI (GPay, PhonePe)</span><span style="font-size:11px;color:var(--green);font-weight:500">✓ On</span></div>
+        <div class="settings-row"><span class="settings-key">Cash on Delivery</span><span style="font-size:11px;color:var(--green);font-weight:500">✓ On</span></div>
+        <div class="settings-row"><span class="settings-key">Card Payments</span><span style="font-size:11px;color:var(--red)">✕ Off</span></div>
+        <div class="settings-row"><span class="settings-key">Mess Plan / Month</span><span class="settings-val">₹3,200 <span class="settings-edit">Edit</span></span></div>
+        <div class="settings-row"><span class="settings-key">Min. Order</span><span class="settings-val">₹50 <span class="settings-edit">Edit</span></span></div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">🔒 Privacy & Legal</div>
+        <div class="settings-row" style="cursor:pointer"><span class="settings-key">Terms of Service</span><span style="color:var(--text3);font-size:12px">›</span></div>
+        <div class="settings-row" style="cursor:pointer"><span class="settings-key">Privacy Policy</span><span style="color:var(--text3);font-size:12px">›</span></div>
+        <div class="settings-row" style="cursor:pointer"><span class="settings-key">Food Safety Certificate</span><span style="color:var(--text3);font-size:12px">›</span></div>
+        <div class="settings-row" style="cursor:pointer"><span class="settings-key">Download My Data</span><span style="color:var(--text3);font-size:12px">›</span></div>
+        <div class="settings-row" style="cursor:pointer"><span class="settings-key" style="color:var(--red)">Delete Account</span><span style="color:var(--text3);font-size:12px">›</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FAB -->
+  <div class="fab" id="fab-btn" onclick="fabAction()">+</div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="nav-tab active" id="tab-home" onclick="goTab('home')">
+      <div class="icon">📊</div><div class="label">Home</div>
+    </div>
+    <div class="nav-tab" id="tab-orders" onclick="goTab('orders')">
+      <div class="icon">🧾</div><div class="label">Orders</div>
+      <span class="nav-badge">4</span>
+    </div>
+    <div class="nav-tab" id="tab-menu" onclick="goTab('menu')">
+      <div class="icon">🍽️</div><div class="label">Menu</div>
+    </div>
+    <div class="nav-tab" id="tab-reviews" onclick="goTab('reviews')">
+      <div class="icon">⭐</div><div class="label">Reviews</div>
+    </div>
+    <div class="nav-tab" id="tab-settings" onclick="goTab('settings')">
+      <div class="icon">⚙️</div><div class="label">Settings</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function goTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('main-content').scrollTop = 0;
+  const fab = document.getElementById('fab-btn');
+  fab.style.display = name === 'menu' ? 'flex' : 'none';
+}
+function filterOrders(el) {
+  el.closest('.filter-tabs').querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function toggleOpen() {
+  const btn = document.getElementById('toggle-open-btn');
+  const dot = document.querySelector('.open-dot');
+  const label = document.querySelector('.open-label');
+  const timeLabel = document.querySelector('.open-time');
+  if (btn.textContent === 'Mark Closed') {
+    btn.textContent = 'Mark Open';
+    btn.style.background = 'var(--green2)';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'rgba(46,204,122,0.2)';
+    dot.style.background = 'var(--red)';
+    dot.style.animation = 'none';
+    label.textContent = 'Closed';
+    label.style.color = 'var(--red)';
+    timeLabel.textContent = '· Opens at 7:00 PM';
+  } else {
+    btn.textContent = 'Mark Closed';
+    btn.style.background = 'var(--red2)';
+    btn.style.color = 'var(--red)';
+    btn.style.borderColor = 'rgba(255,92,92,0.2)';
+    dot.style.background = 'var(--green)';
+    dot.style.animation = 'pulse 1.4s infinite';
+    label.textContent = 'Open';
+    label.style.color = 'var(--green)';
+    timeLabel.textContent = '· Since 7:00 AM';
+  }
+}
+function fabAction() {
+  alert('Add new menu item — form would open here');
+}
+document.getElementById('fab-btn').style.display = 'none';
+</script>
