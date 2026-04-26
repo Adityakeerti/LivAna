@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LivAna — Auth API Test Console</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg:           #0d0f14;
+      --surface:      #151821;
+      --surface-2:    #1c2030;
+      --border:       #2a2f45;
+      --primary:      #6c63ff;
+      --primary-glow: rgba(108,99,255,.25);
+      --success:      #22c55e;
+      --error:        #ef4444;
+      --warn:         #f59e0b;
+      --text:         #e2e8f0;
+      --text-muted:   #64748b;
+      --mono:         'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .logo {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--primary), #9f7aea);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; color: #fff;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header span { color: var(--text-muted); font-size: .85rem; }
+
+    /* ── Layout grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: var(--primary); }
+
+    .card-title {
+      display: flex; align-items: center; gap: .6rem;
+      font-size: .95rem; font-weight: 600; margin-bottom: 1.2rem;
+    }
+    .badge {
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+      padding: .2em .6em; border-radius: 5px;
+      background: var(--primary-glow); color: var(--primary);
+    }
+    .badge.get   { background: rgba(34,197,94,.15); color: var(--success); }
+    .badge.patch { background: rgba(245,158,11,.15); color: var(--warn); }
+    .badge.post  { background: var(--primary-glow); color: var(--primary); }
+    .badge.s200  { background: rgba(34,197,94,.15);  color: var(--success); }
+    .badge.s4xx  { background: rgba(239,68,68,.15);  color: var(--error); }
+    .badge.s5xx  { background: rgba(239,68,68,.25);  color: #ff6b6b; }
+
+    /* ── Log Panel ── */
+    .log-panel {
+      margin-top: 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .log-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .9rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .log-header h3 { font-size: .95rem; font-weight: 600; }
+    .log-header .log-actions { display: flex; gap: .5rem; }
+    .btn-sm {
+      font-size: .75rem; padding: .3rem .75rem; border-radius: 6px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer; transition: all .15s;
+    }
+    .btn-sm:hover { border-color: var(--primary); color: var(--text); }
+    .log-body {
+      max-height: 420px;
+      overflow-y: auto;
+      padding: .75rem 1rem;
+      display: flex; flex-direction: column; gap: .6rem;
+    }
+    .log-empty {
+      color: var(--text-muted); font-size: .82rem;
+      text-align: center; padding: 1.5rem;
+    }
+    .log-entry {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color .15s;
+    }
+    .log-entry:hover { border-color: var(--primary); }
+    .log-entry-head {
+      display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+      padding: .55rem .85rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .log-ts { font-size: .72rem; color: var(--text-muted); font-family: var(--mono); }
+    .log-label { font-size: .82rem; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .log-copy-btn {
+      font-size: .7rem; padding: .2rem .6rem; border-radius: 5px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); cursor: pointer; white-space: nowrap;
+      transition: all .15s; margin-left: auto;
+    }
+    .log-copy-btn:hover { border-color: var(--primary); color: var(--text); }
+    .log-entry-body {
+      font-family: var(--mono); font-size: .78rem;
+      padding: .6rem .85rem;
+      color: var(--text);
+      white-space: pre-wrap; word-break: break-all;
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+    .log-entry.open .log-entry-body { display: block; }
+
+    /* ── Form elements ── */
+    label {
+      display: block;
+      font-size: .78rem; font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: .35rem; margin-top: .85rem;
+    }
+    input, textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .55rem .75rem;
+      font-family: var(--mono);
+      font-size: .82rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* ── Buttons ── */
+    button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: .65rem 1rem;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: .9rem; font-weight: 600;
+      background: linear-gradient(135deg, var(--primary), #9f7aea);
+      color: #fff;
+      transition: opacity .2s, transform .1s, box-shadow .2s;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+    button:hover   { opacity: .9; box-shadow: 0 6px 25px var(--primary-glow); }
+    button:active  { transform: scale(.98); }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Response box ── */
+    .response-box {
+      margin-top: 1rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem;
+      font-family: var(--mono);
+      font-size: .78rem;
+      color: var(--text-muted);
+      max-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .response-box.ok    { border-color: var(--success); color: #86efac; }
+    .response-box.err   { border-color: var(--error);   color: #fca5a5; }
+    .response-box.warn  { border-color: var(--warn);    color: #fde68a; }
+
+    /* ── Token store panel ── */
+    .token-store {
+      grid-column: 1 / -1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+    .token-store h2 { font-size: .95rem; font-weight: 600; margin-bottom: 1rem; }
+    .token-row {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: .6rem;
+    }
+    .token-label {
+      font-size: .75rem; font-weight: 600; color: var(--text-muted);
+      width: 120px; flex-shrink: 0;
+    }
+    .token-value {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .35rem .6rem;
+      font-family: var(--mono);
+      font-size: .72rem;
+      color: #a78bfa;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .token-value:hover { border-color: var(--primary); }
+    .copy-btn {
+      padding: .3rem .6rem; font-size: .72rem; width: auto; margin-top: 0;
+      border-radius: 6px; background: var(--surface-2); color: var(--text-muted);
+      border: 1px solid var(--border); box-shadow: none;
+    }
+    .copy-btn:hover { border-color: var(--primary); color: var(--text); }
+
+    /* ── Status indicator ── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-muted); display: inline-block; margin-right: .4rem;
+    }
+    .status-dot.ok  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-dot.err { background: var(--error);   box-shadow: 0 0 6px var(--error); }
+
+    /* ── Checklist ── */
+    .checklist { margin-top: 1rem; list-style: none; }
+    .checklist li {
+      padding: .4rem .6rem;
+      border-radius: 6px;
+      font-size: .82rem;
+      display: flex; align-items: center; gap: .5rem;
+      transition: background .2s;
+    }
+    .checklist li:hover { background: var(--surface-2); }
+    .checklist li .icon { font-size: 1rem; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+    .note {
+      font-size: .75rem; color: var(--text-muted);
+      background: rgba(108,99,255,.07);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .6rem .8rem;
+      margin-top: .75rem;
+      line-height: 1.6;
+    }
+    .note strong { color: var(--warn); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LA</div>
+  <div>
+    <h1>LivAna · Auth API Test Console</h1>
+    <span>Phase 2 · Dev 1 — JWT / Google OAuth / Refresh / Rate Limit</span>
+  </div>
+</header>
+
+<!-- ── Token Store ─────────────────────────────────────────────────────────── -->
+<div class="token-store" id="tokenStore">
+  <h2>🔑 Active Token Store</h2>
+  <div class="token-row">
+    <span class="token-label">Access Token</span>
+    <span class="token-value" id="displayAccessToken" title="Click to copy" onclick="copyToken('accessToken')">— not yet acquired —</span>
+    <button class="copy-btn" onclick="copyToken('accessToken')">Copy</button>
+  </div>
+  <div class="token-row">
+    <span class="token-label">Refresh Token</span>
+    <span class="token-value" id="displayRefreshToken" title="Click to copy" onclick="copyToken('refreshToken')">— not yet acquired —</span>
+    <button class="copy-btn" onclick="copyToken('refreshToken')">Copy</button>
+  </div>
+  <div class="note">
+    <strong>Note:</strong> Tokens are saved in memory. After a successful Google login, they auto-fill
+    all subsequent test forms. Click any token to copy it to clipboard.
+  </div>
+</div>
+
+<hr />
+
+<div class="grid">
+
+  <!-- ── 1. Google Auth ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge post">POST</span>
+      /api/auth/google
+    </div>
+    <label for="googleIdToken">Google ID Token (from your Android / iOS app)</label>
+    <textarea id="googleIdToken" placeholder="Paste the idToken string from your mobile app here..."></textarea>
+
+    <div class="note">
+      <strong>How to get an ID token for testing:</strong><br>
+      Use the Google OAuth Playground at <em>developers.google.com/oauthplayground</em>
+      or capture it from your Android app using Logcat.
+    </div>
+
+    <button id="btnGoogleAuth" onclick="googleAuth()">Sign In with Google Token</button>
+    <div class="response-box" id="resGoogleAuth">Awaiting request…</div>
+  </div>
+
+  <!-- ── 2. GET /api/users/me ──────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge get">GET</span>
+      /api/users/me
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Tests the JWT filter. Requires a valid access token. Click after a successful login.
+    </p>
+    <label for="meToken">Override Access Token (leave blank to use stored)</label>
+    <input id="meToken" type="text" placeholder="(auto-filled from token store)" />
+
+    <button onclick="getMe()">Fetch My Profile</button>
+    <div class="response-box" id="resMe">Awaiting request…</div>
+  </div>
+
+  <!-- ── 3. Refresh Token ──────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge post">POST</span>
+      /api/auth/refresh
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Exchange the 7-day refresh token for a new 15-min access token.
+    </p>
+    <label for="refreshTokenInput">Refresh Token (auto-filled)</label>
+    <input id="refreshTokenInput" type="text" placeholder="(auto-filled after login)" />
+
+    <button onclick="refresh()">Refresh Access Token</button>
+    <div class="response-box" id="resRefresh">Awaiting request…</div>
+  </div>
+
+  <!-- ── 4. Logout ─────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge post">POST</span>
+      /api/auth/logout
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Revokes the refresh token in Valkey. After this, /refresh with the same token must return 401.
+    </p>
+    <label for="logoutRefreshToken">Refresh Token (auto-filled)</label>
+    <input id="logoutRefreshToken" type="text" placeholder="(auto-filled after login)" />
+
+    <button onclick="logout()">Logout</button>
+    <div class="response-box" id="resLogout">Awaiting request…</div>
+  </div>
+
+  <!-- ── 5. Refresh After Logout ───────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge post">POST</span>
+      /api/auth/refresh — After Logout (expect 401)
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Use the <em>same</em> refresh token as before logout. Should return <strong style="color:var(--error)">401 Unauthorized</strong>.
+    </p>
+    <label for="revokedRefreshToken">Revoked Refresh Token</label>
+    <input id="revokedRefreshToken" type="text" placeholder="Paste the old refresh token here" />
+
+    <button onclick="refreshAfterLogout()">Try Revoked Token (expect 401)</button>
+    <div class="response-box" id="resRevokedRefresh">Awaiting request…</div>
+  </div>
+
+  <!-- ── 6. Protected without JWT ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge get">GET</span>
+      /api/users/me — No Auth Header (expect 401)
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Hits the endpoint with no Authorization header. Should return <strong style="color:var(--error)">401</strong>.
+    </p>
+
+    <button onclick="getMeNoAuth()">Test Without Token (expect 401)</button>
+    <div class="response-box" id="resMeNoAuth">Awaiting request…</div>
+  </div>
+
+  <!-- ── 7. PATCH /api/users/me ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge patch">PATCH</span>
+      /api/users/me
+    </div>
+    <label for="patchFullName">Full Name</label>
+    <input id="patchFullName" type="text" placeholder="e.g. Arjun Mehta" />
+    <label for="patchPhone">Phone</label>
+    <input id="patchPhone" type="text" placeholder="e.g. 9876543210" />
+    <label for="patchCityId">City ID</label>
+    <input id="patchCityId" type="number" placeholder="e.g. 1" />
+
+    <button onclick="patchMe()">Update Profile</button>
+    <div class="response-box" id="resPatchMe">Awaiting request…</div>
+  </div>
+
+  <!-- ── 8. Rate Limit Test ─────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge post">POST</span>
+      Rate Limit Stress Test — 110 requests
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Fires 110 rapid requests to /actuator/health. First 100 should be 200 OK, 
+      then you should see <strong style="color:var(--warn)">429 Too Many Requests</strong>.
+    </p>
+    <button onclick="rateLimitTest()" id="btnRateLimit">Run Rate Limit Test (110 req)</button>
+    <div class="response-box" id="resRateLimit">Awaiting request…</div>
+  </div>
+
+</div>
+
+<hr />
+
+<!-- ── Verification Checklist ─────────────────────────────────────────────── -->
+<div class="card" style="margin-top:1.5rem">
+  <div class="card-title">✅ Testing Checkpoint</div>
+  <ul class="checklist" id="checklist">
+    <li id="chk1"><span class="icon">⬜</span> POST /api/auth/google → accessToken + refreshToken returned</li>
+    <li id="chk2"><span class="icon">⬜</span> GET /api/users/me with JWT → user profile returned</li>
+    <li id="chk3"><span class="icon">⬜</span> POST /api/auth/refresh → new accessToken returned</li>
+    <li id="chk4"><span class="icon">⬜</span> POST /api/auth/logout → 200 OK</li>
+    <li id="chk5"><span class="icon">⬜</span> POST /api/auth/refresh (revoked token) → 401 Unauthorized</li>
+    <li id="chk6"><span class="icon">⬜</span> GET /api/users/me (no auth) → 401 Unauthorized</li>
+    <li id="chk7"><span class="icon">⬜</span> Rate limit test → first 100 OK, then 429</li>
+  </ul>
+</div>
+
+<!-- ── Request Log Panel ─────────────────────────────────────────────────── -->
+<div class="log-panel">
+  <div class="log-header">
+    <h3>📋 Request Log <span id="logCount" style="color:var(--text-muted);font-weight:400;font-size:.8rem"></span></h3>
+    <div class="log-actions">
+      <button class="btn-sm" onclick="copyAllLogs()">Copy All</button>
+      <button class="btn-sm" onclick="clearLogs()">Clear</button>
+    </div>
+  </div>
+  <div class="log-body" id="logBody">
+    <div class="log-empty" id="logEmpty">No requests yet. Run a test above ↑</div>
+  </div>
+</div>
+
+<script>
+  const BASE = 'http://localhost:8080';
+
+  // In-memory token store
+  const store = { accessToken: null, refreshToken: null };
+
+  // ── Request Log ────────────────────────────────────────────────────────────
+  const logEntries = [];
+
+  function addLog(label, method, path, status, body) {
+    const ts = new Date().toLocaleTimeString('en-IN', { hour12: false });
+    const entry = { ts, label, method, path, status, body };
+    logEntries.push(entry);
+
+    const isEmpty = document.getElementById('logEmpty');
+    if (isEmpty) isEmpty.remove();
+
+    const count = document.getElementById('logCount');
+    count.textContent = `(${logEntries.length})`;
+
+    const statusClass = status >= 500 ? 's5xx' : status >= 400 ? 's4xx' : 's200';
+    const entryEl = document.createElement('div');
+    entryEl.className = 'log-entry';
+    entryEl.dataset.idx = logEntries.length - 1;
+
+    const bodyText = typeof body === 'object' ? JSON.stringify(body, null, 2) : String(body);
+    const copyText = `[${ts}] ${method} ${path} → HTTP ${status}\n\n${bodyText}`;
+
+    entryEl.innerHTML = `
+      <div class="log-entry-head" onclick="this.parentElement.classList.toggle('open')">
+        <span class="log-ts">${ts}</span>
+        <span class="badge ${method.toLowerCase()}">${method}</span>
+        <span class="log-label">${path}</span>
+        <span class="badge ${statusClass}">HTTP ${status}</span>
+        <button class="log-copy-btn" onclick="event.stopPropagation();copyLogEntry(this,'${encodeURIComponent(copyText)}')">Copy</button>
+      </div>
+      <div class="log-entry-body">${escHtml(bodyText)}</div>
+    `;
+
+    const logBody = document.getElementById('logBody');
+    logBody.appendChild(entryEl);
+    logBody.scrollTop = logBody.scrollHeight;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function copyLogEntry(btn, encoded) {
+    navigator.clipboard.writeText(decodeURIComponent(encoded))
+      .then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1200); });
+  }
+
+  function copyAllLogs() {
+    const text = logEntries.map(e =>
+      `[${e.ts}] ${e.method} ${e.path} → HTTP ${e.status}\n\n${
+        typeof e.body === 'object' ? JSON.stringify(e.body, null, 2) : e.body
+      }`
+    ).join('\n\n' + '─'.repeat(60) + '\n\n');
+    navigator.clipboard.writeText(text)
+      .then(() => alert(`Copied ${logEntries.length} log entries to clipboard!`));
+  }
+
+  function clearLogs() {
+    logEntries.length = 0;
+    const logBody = document.getElementById('logBody');
+    logBody.innerHTML = '<div class="log-empty" id="logEmpty">No requests yet. Run a test above ↑</div>';
+    document.getElementById('logCount').textContent = '';
+  }
+
+  // ── Token store helpers ────────────────────────────────────────────────────
+  function saveTokens(access, refresh) {
+    if (access)  { store.accessToken  = access;  document.getElementById('displayAccessToken').textContent  = access; }
+    if (refresh) { store.refreshToken = refresh; document.getElementById('displayRefreshToken').textContent = refresh; }
+    // Auto-fill forms
+    if (store.refreshToken) {
+      document.getElementById('refreshTokenInput').value    = store.refreshToken;
+      document.getElementById('logoutRefreshToken').value   = store.refreshToken;
+    }
+  }
+
+  function getToken() {
+    const override = document.getElementById('meToken').value.trim();
+    return override || store.accessToken;
+  }
+
+  async function copyToken(which) {
+    const val = store[which];
+    if (!val) return;
+    await navigator.clipboard.writeText(val);
+  }
+
+  // ── Generic fetch helper ──────────────────────────────────────────────────
+  async function req(method, path, body, token, targetEl) {
+    const el = document.getElementById(targetEl);
+    el.className = 'response-box';
+    el.textContent = '⏳ Sending…';
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    try {
+      const res = await fetch(BASE + path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+
+      const text = await res.text();
+      let parsed;
+      try { parsed = JSON.parse(text); } catch { parsed = text; }
+      const pretty = typeof parsed === 'object' ? JSON.stringify(parsed, null, 2) : parsed;
+
+      el.className = 'response-box ' + (res.ok ? 'ok' : 'err');
+      el.textContent = `HTTP ${res.status}\n\n${pretty}`;
+      addLog(targetEl, method, path, res.status, parsed);
+      return { ok: res.ok, status: res.status, data: parsed };
+    } catch (e) {
+      el.className = 'response-box err';
+      el.textContent = '❌ Network error — is the backend running?\n\n' + e.message;
+      addLog(targetEl, method, path, 'ERR', e.message);
+      return { ok: false };
+    }
+  }
+
+  // ── 1. Google Auth ─────────────────────────────────────────────────────────
+  async function googleAuth() {
+    const idToken = document.getElementById('googleIdToken').value.trim();
+    if (!idToken) { alert('Paste your Google ID token first'); return; }
+
+    const r = await req('POST', '/api/auth/google', { idToken }, null, 'resGoogleAuth');
+    if (r.ok && r.data.accessToken) {
+      saveTokens(r.data.accessToken, r.data.refreshToken);
+      checkItem('chk1', true);
+    } else {
+      checkItem('chk1', false);
+    }
+  }
+
+  // ── 2. GET /api/users/me ──────────────────────────────────────────────────
+  async function getMe() {
+    const token = getToken();
+    if (!token) { alert('No access token in store — login first'); return; }
+    const r = await req('GET', '/api/users/me', null, token, 'resMe');
+    checkItem('chk2', r.ok);
+  }
+
+  // ── 3. Refresh ────────────────────────────────────────────────────────────
+  async function refresh() {
+    const refreshToken = document.getElementById('refreshTokenInput').value.trim() || store.refreshToken;
+    if (!refreshToken) { alert('No refresh token available'); return; }
+    const r = await req('POST', '/api/auth/refresh', { refreshToken }, null, 'resRefresh');
+    if (r.ok && r.data.accessToken) {
+      saveTokens(r.data.accessToken, null);
+      checkItem('chk3', true);
+    } else {
+      checkItem('chk3', false);
+    }
+  }
+
+  // ── 4. Logout ─────────────────────────────────────────────────────────────
+  async function logout() {
+    const refreshToken = document.getElementById('logoutRefreshToken').value.trim() || store.refreshToken;
+    const token = store.accessToken;
+    if (!refreshToken) { alert('No refresh token available'); return; }
+    if (!token)        { alert('No access token for logout — login first'); return; }
+
+    // Save the revoked token for the "after logout" test
+    document.getElementById('revokedRefreshToken').value = refreshToken;
+
+    const r = await req('POST', '/api/auth/logout', { refreshToken }, token, 'resLogout');
+    checkItem('chk4', r.ok);
+  }
+
+  // ── 5. Refresh with revoked token ─────────────────────────────────────────
+  async function refreshAfterLogout() {
+    const refreshToken = document.getElementById('revokedRefreshToken').value.trim();
+    if (!refreshToken) { alert('Enter the old refresh token to test'); return; }
+    const r = await req('POST', '/api/auth/refresh', { refreshToken }, null, 'resRevokedRefresh');
+    // We WANT a 401 here
+    checkItem('chk5', r.status === 401);
+    if (r.status === 401) {
+      document.getElementById('resRevokedRefresh').className = 'response-box ok';
+      document.getElementById('resRevokedRefresh').textContent += '\n\n✅ Correct! 401 returned for revoked token.';
+    }
+  }
+
+  // ── 6. GET /api/users/me — no auth ───────────────────────────────────────
+  async function getMeNoAuth() {
+    const el = document.getElementById('resMeNoAuth');
+    el.className = 'response-box';
+    el.textContent = '⏳ Sending without Authorization header…';
+    try {
+      const res = await fetch(BASE + '/api/users/me');
+      const text = await res.text();
+      let parsed; try { parsed = JSON.parse(text); } catch { parsed = text; }
+      const pretty = typeof parsed === 'object' ? JSON.stringify(parsed, null, 2) : parsed;
+      el.textContent = `HTTP ${res.status}\n\n${pretty}`;
+      checkItem('chk6', res.status === 401);
+      el.className = 'response-box ' + (res.status === 401 ? 'ok' : 'err');
+      if (res.status === 401) el.textContent += '\n\n✅ Correct! 401 returned with no auth header.';
+      addLog('resMeNoAuth', 'GET', '/api/users/me (no auth)', res.status, parsed);
+    } catch (e) {
+      el.className = 'response-box err';
+      el.textContent = '❌ Network error: ' + e.message;
+      addLog('resMeNoAuth', 'GET', '/api/users/me (no auth)', 'ERR', e.message);
+    }
+  }
+
+  // ── 7. PATCH /api/users/me ────────────────────────────────────────────────
+  async function patchMe() {
+    const token = getToken();
+    if (!token) { alert('No access token — login first'); return; }
+    const body = {};
+    const fn = document.getElementById('patchFullName').value.trim();
+    const ph = document.getElementById('patchPhone').value.trim();
+    const ci = document.getElementById('patchCityId').value.trim();
+    if (fn) body.fullName = fn;
+    if (ph) body.phone    = ph;
+    if (ci) body.cityId   = parseInt(ci);
+    if (Object.keys(body).length === 0) { alert('Fill in at least one field'); return; }
+    await req('PATCH', '/api/users/me', body, token, 'resPatchMe');
+  }
+
+  // ── 8. Rate limit stress test ─────────────────────────────────────────────
+  async function rateLimitTest() {
+    const btn = document.getElementById('btnRateLimit');
+    const el  = document.getElementById('resRateLimit');
+    btn.disabled = true;
+    el.className = 'response-box';
+    el.textContent = '⏳ Firing 110 requests…';
+
+    const results = await Promise.all(
+      Array.from({ length: 110 }, (_, i) =>
+        fetch(BASE + '/actuator/health').then(r => r.status).catch(() => 'ERR')
+      )
+    );
+
+    const counts = results.reduce((acc, s) => {
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {});
+
+    const has429 = (counts[429] || 0) > 0;
+    el.className = 'response-box ' + (has429 ? 'ok' : 'warn');
+    const summary =
+      `Results (110 requests):\n` +
+      Object.entries(counts).map(([k, v]) => `  HTTP ${k}: ${v} requests`).join('\n') +
+      (has429
+        ? '\n\n✅ Rate limiting is working! Got 429 after the first 100.'
+        : '\n\n⚠️  No 429 seen — check if RateLimitFilter is active and Valkey is running.');
+    el.textContent = summary;
+    addLog('resRateLimit', 'GET', '/actuator/health ×110', has429 ? 429 : 200, summary);
+    checkItem('chk7', has429);
+    btn.disabled = false;
+  }
+
+  // ── Checklist helper ──────────────────────────────────────────────────────
+  function checkItem(id, passed) {
+    const el = document.getElementById(id);
+    const icon = el.querySelector('.icon');
+    icon.textContent = passed ? '✅' : '❌';
+  }
+</script>
+</body>
+</html>
