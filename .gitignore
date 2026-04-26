@@ -1,29 +1,20 @@
-# Compiled class file
+# ─── Compiled output ──────────────────────────────────────────────────────────
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
-*.nar
 *.ear
+*.nar
 *.zip
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
 
-# Maven
+# ─── Maven build ──────────────────────────────────────────────────────────────
 target/
+backend/target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -34,23 +25,44 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Spring Boot
-backend/target/
-.mvn/
+# ─── JVM crash dumps ──────────────────────────────────────────────────────────
+hs_err_pid*
+replay_pid*
 
-# IDEs
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
 .idea/
 *.iml
 *.iws
+*.ipr
 .vscode/
 .classpath
 .project
 .settings/
 .springBeans
+*.swp
+*.swo
 
-# OS
+# ─── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Project specific
+# ─── SECRETS — never commit these ─────────────────────────────────────────────
+# Google OAuth client secret downloaded from Cloud Console
+backend/client_secret*.json
+client_secret*.json
+
+# Local dev properties may contain API keys / DB passwords
+# Commit application-dev.properties.template instead
+# backend/src/main/resources/application-dev.properties
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# ─── Spring Boot specific ─────────────────────────────────────────────────────
+backend/HELP.md
+
+# ─── Project specific ─────────────────────────────────────────────────────────
 backend.zip
