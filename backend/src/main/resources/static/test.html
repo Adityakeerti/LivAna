@@ -77,9 +77,11 @@
       padding: .2em .6em; border-radius: 5px;
       background: var(--primary-glow); color: var(--primary);
     }
-    .badge.get   { background: rgba(34,197,94,.15); color: var(--success); }
-    .badge.patch { background: rgba(245,158,11,.15); color: var(--warn); }
-    .badge.post  { background: var(--primary-glow); color: var(--primary); }
+    .badge.get    { background: rgba(34,197,94,.15); color: var(--success); }
+    .badge.patch  { background: rgba(245,158,11,.15); color: var(--warn); }
+    .badge.put    { background: rgba(59,130,246,.15); color: #60a5fa; }
+    .badge.delete { background: rgba(239,68,68,.15);  color: var(--error); }
+    .badge.post   { background: var(--primary-glow); color: var(--primary); }
     .badge.s200  { background: rgba(34,197,94,.15);  color: var(--success); }
     .badge.s4xx  { background: rgba(239,68,68,.15);  color: var(--error); }
     .badge.s5xx  { background: rgba(239,68,68,.25);  color: #ff6b6b; }
@@ -289,8 +291,8 @@
 <header>
   <div class="logo">LA</div>
   <div>
-    <h1>LivAna · Auth API Test Console</h1>
-    <span>Phase 2 · Dev 1 — JWT / Google OAuth / Refresh / Rate Limit</span>
+    <h1>LivAna · API Test Console</h1>
+    <span>Phase 3 · Dev 1 — Security Filter Chain / User Profile APIs</span>
   </div>
 </header>
 
@@ -431,7 +433,48 @@
     <div class="response-box" id="resPatchMe">Awaiting request…</div>
   </div>
 
-  <!-- ── 8. Rate Limit Test ─────────────────────────────────────────────────── -->
+  <!-- ── 8. PUT /api/users/me ─────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge put">PUT</span>
+      /api/users/me
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Full profile update — sends all editable fields. Missing fields are left unchanged (null-safe).
+    </p>
+    <label for="putFullName">Full Name</label>
+    <input id="putFullName" type="text" placeholder="e.g. Arjun Mehta" />
+    <label for="putPhone">Phone</label>
+    <input id="putPhone" type="text" placeholder="e.g. 9876543210" />
+    <label for="putAvatarUrl">Avatar URL</label>
+    <input id="putAvatarUrl" type="text" placeholder="https://example.com/photo.jpg" />
+    <label for="putCityId">City ID</label>
+    <input id="putCityId" type="number" placeholder="e.g. 1" />
+
+    <button onclick="putMe()">PUT — Update Profile</button>
+    <div class="response-box" id="resPutMe">Awaiting request…</div>
+  </div>
+
+  <!-- ── 9. DELETE /api/users/me ───────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span class="badge delete">DELETE</span>
+      /api/users/me — Soft Delete (expect 204)
+    </div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
+      Sets <code style="color:var(--warn)">is_active = false</code> in the DB. Returns <strong>204 No Content</strong>.
+      Verify in DBeaver that the row still exists but <code>is_active</code> is now false.
+    </p>
+    <div class="note">
+      <strong>Warning:</strong> After soft-delete, the access token is still valid until it expires.
+      Subsequent <code>GET /api/users/me</code> calls will still succeed until the JWT expires.
+    </div>
+
+    <button onclick="softDelete()" style="background:linear-gradient(135deg,#ef4444,#dc2626)">DELETE — Soft Delete My Account</button>
+    <div class="response-box" id="resDeleteMe">Awaiting request…</div>
+  </div>
+
+  <!-- ── 10. Rate Limit Test ────────────────────────────────────────────────── -->
   <div class="card">
     <div class="card-title">
       <span class="badge post">POST</span>
@@ -454,12 +497,15 @@
   <div class="card-title">✅ Testing Checkpoint</div>
   <ul class="checklist" id="checklist">
     <li id="chk1"><span class="icon">⬜</span> POST /api/auth/google → accessToken + refreshToken returned</li>
-    <li id="chk2"><span class="icon">⬜</span> GET /api/users/me with JWT → user profile returned</li>
+    <li id="chk2"><span class="icon">⬜</span> GET /api/users/me with valid JWT → user profile returned</li>
     <li id="chk3"><span class="icon">⬜</span> POST /api/auth/refresh → new accessToken returned</li>
     <li id="chk4"><span class="icon">⬜</span> POST /api/auth/logout → 200 OK</li>
     <li id="chk5"><span class="icon">⬜</span> POST /api/auth/refresh (revoked token) → 401 Unauthorized</li>
     <li id="chk6"><span class="icon">⬜</span> GET /api/users/me (no auth) → 401 Unauthorized</li>
-    <li id="chk7"><span class="icon">⬜</span> Rate limit test → first 100 OK, then 429</li>
+    <li id="chk7"><span class="icon">⬜</span> PUT /api/users/me with { phone } → phone updated (verify in DBeaver)</li>
+    <li id="chk8"><span class="icon">⬜</span> GET /api/users/me with expired JWT → 401 Unauthorized</li>
+    <li id="chk9"><span class="icon">⬜</span> DELETE /api/users/me → 204 No Content, is_active=false in DB</li>
+    <li id="chk10"><span class="icon">⬜</span> Rate limit test → first 100 OK, then 429</li>
   </ul>
 </div>
 
@@ -701,7 +747,52 @@
     await req('PATCH', '/api/users/me', body, token, 'resPatchMe');
   }
 
-  // ── 8. Rate limit stress test ─────────────────────────────────────────────
+  // ── 8. PUT /api/users/me ──────────────────────────────────────────────────
+  async function putMe() {
+    const token = getToken();
+    if (!token) { alert('No access token — login first'); return; }
+    const body = {};
+    const fn  = document.getElementById('putFullName').value.trim();
+    const ph  = document.getElementById('putPhone').value.trim();
+    const av  = document.getElementById('putAvatarUrl').value.trim();
+    const ci  = document.getElementById('putCityId').value.trim();
+    if (fn) body.fullName  = fn;
+    if (ph) body.phone     = ph;
+    if (av) body.avatarUrl = av;
+    if (ci) body.cityId    = parseInt(ci);
+    if (Object.keys(body).length === 0) { alert('Fill in at least one field to update'); return; }
+    const r = await req('PUT', '/api/users/me', body, token, 'resPutMe');
+    checkItem('chk7', r.ok);
+  }
+
+  // ── 9. DELETE /api/users/me ───────────────────────────────────────────────
+  async function softDelete() {
+    const token = getToken();
+    if (!token) { alert('No access token — login first'); return; }
+    if (!confirm('This will soft-delete your account (is_active = false). Continue?')) return;
+    const el = document.getElementById('resDeleteMe');
+    el.className = 'response-box';
+    el.textContent = '⏳ Sending DELETE…';
+    try {
+      const res = await fetch(BASE + '/api/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const ok = res.status === 204;
+      el.className = 'response-box ' + (ok ? 'ok' : 'err');
+      el.textContent = ok
+        ? 'HTTP 204 No Content\n\n✅ Account soft-deleted. Check DBeaver — is_active should be false.'
+        : `HTTP ${res.status}\n\n${await res.text()}`;
+      checkItem('chk9', ok);
+      addLog('resDeleteMe', 'DELETE', '/api/users/me', res.status, ok ? '204 No Content' : 'Error');
+    } catch (e) {
+      el.className = 'response-box err';
+      el.textContent = '❌ Network error: ' + e.message;
+      addLog('resDeleteMe', 'DELETE', '/api/users/me', 'ERR', e.message);
+    }
+  }
+
+  // ── 10. Rate limit stress test ────────────────────────────────────────────
   async function rateLimitTest() {
     const btn = document.getElementById('btnRateLimit');
     const el  = document.getElementById('resRateLimit');
@@ -730,7 +821,7 @@
         : '\n\n⚠️  No 429 seen — check if RateLimitFilter is active and Valkey is running.');
     el.textContent = summary;
     addLog('resRateLimit', 'GET', '/actuator/health ×110', has429 ? 429 : 200, summary);
-    checkItem('chk7', has429);
+    checkItem('chk10', has429);
     btn.disabled = false;
   }
 

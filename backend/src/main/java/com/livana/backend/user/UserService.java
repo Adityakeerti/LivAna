@@ -65,10 +65,22 @@ public class UserService {
     @Transactional
     public User updateProfile(Long userId, UpdateProfileRequest req) {
         User user = getById(userId);
-        if (req.phone() != null)  user.setPhone(req.phone());
-        if (req.cityId() != null) user.setCityId(req.cityId());
-        if (req.fullName() != null && !req.fullName().isBlank()) user.setFullName(req.fullName());
+        if (req.fullName()  != null && !req.fullName().isBlank()) user.setFullName(req.fullName());
+        if (req.phone()     != null) user.setPhone(req.phone());
+        if (req.avatarUrl() != null) user.setAvatarUrl(req.avatarUrl());
+        if (req.cityId()    != null) user.setCityId(req.cityId());
         return userRepository.save(user);
+    }
+
+    /**
+     * Soft-delete: mark account inactive instead of dropping the row.
+     * No data is removed — profile remains for audit/compliance purposes.
+     */
+    @Transactional
+    public void softDelete(Long userId) {
+        User user = getById(userId);
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     // ── Inner DTO ─────────────────────────────────────────────────────────────
@@ -76,6 +88,7 @@ public class UserService {
     public record UpdateProfileRequest(
             String fullName,
             String phone,
+            String avatarUrl,
             Long   cityId
     ) {}
 }
