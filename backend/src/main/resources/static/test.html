@@ -474,17 +474,28 @@
     <div class="response-box" id="resDeleteMe">Awaiting request…</div>
   </div>
 
-  <!-- ── 10. Rate Limit Test ────────────────────────────────────────────────── -->
+  <!-- ── 10. Rate Limit Stress Test ──────────────────────────────────────────── -->
   <div class="card">
     <div class="card-title">
-      <span class="badge post">POST</span>
-      Rate Limit Stress Test — 110 requests
+      <span class="badge get">GET</span>
+      Rate Limit Stress Test — /api/users/me (no auth)
     </div>
     <p style="font-size:.82rem;color:var(--text-muted);margin-top:.5rem">
-      Fires 110 rapid requests to /actuator/health. First 100 should be 200 OK, 
-      then you should see <strong style="color:var(--warn)">429 Too Many Requests</strong>.
+      Fires sequential unauthenticated requests to <code>/api/users/me</code>.
+      This endpoint is in our Security chain — the <strong>UNAUTH tier</strong> (30 req/min per IP) applies.
+      The 31st request should return <strong style="color:var(--warn)">429 Too Many Requests</strong>
+      with a <code>Retry-After</code> header.
     </p>
-    <button onclick="rateLimitTest()" id="btnRateLimit">Run Rate Limit Test (110 req)</button>
+    <div class="note">
+      <strong>Why /api/users/me?</strong> <code>/actuator/health</code> is handled by Spring Boot's
+      management security chain (separate from our custom chain), so our RateLimitFilter
+      may not intercept it. <code>/api/users/me</code> definitely goes through our filter chain.<br><br>
+      <strong>Check server logs</strong> for: <code>[RateLimit] GET /api/users/me → tier=UNAUTH key=rl:ip:...</code><br>
+      After test, run in Valkey: <code>redis-cli --scan --pattern 'rl:*'</code>
+    </div>
+    <label for="rlCount">Request count (default 32 — exceeds 30/min UNAUTH limit)</label>
+    <input id="rlCount" type="number" value="32" min="1" max="500" />
+    <button onclick="rateLimitTest()" id="btnRateLimit">Run Rate Limit Test (UNAUTH tier)</button>
     <div class="response-box" id="resRateLimit">Awaiting request…</div>
   </div>
 
@@ -505,7 +516,8 @@
     <li id="chk7"><span class="icon">⬜</span> PUT /api/users/me with { phone } → phone updated (verify in DBeaver)</li>
     <li id="chk8"><span class="icon">⬜</span> GET /api/users/me with expired JWT → 401 Unauthorized</li>
     <li id="chk9"><span class="icon">⬜</span> DELETE /api/users/me → 204 No Content, is_active=false in DB</li>
-    <li id="chk10"><span class="icon">⬜</span> Rate limit test → first 100 OK, then 429</li>
+    <li id="chk10"><span class="icon">⬜</span> Rate limit: 201st request → HTTP 429 with Retry-After header</li>
+    <li id="chk11"><span class="icon">⬜</span> Valkey keys visible: redis-cli --scan --pattern 'rl:*'</li>
   </ul>
 </div>
 
@@ -794,34 +806,68 @@
 
   // ── 10. Rate limit stress test ────────────────────────────────────────────
   async function rateLimitTest() {
-    const btn = document.getElementById('btnRateLimit');
-    const el  = document.getElementById('resRateLimit');
+    const btn   = document.getElementById('btnRateLimit');
+    const el    = document.getElementById('resRateLimit');
+    const total = parseInt(document.getElementById('rlCount').value) || 32;
+
     btn.disabled = true;
     el.className = 'response-box';
-    el.textContent = '⏳ Firing 110 requests…';
+    el.textContent = `⏳ Firing ${total} sequential requests to /api/users/me (no auth)…`;
 
-    const results = await Promise.all(
-      Array.from({ length: 110 }, (_, i) =>
-        fetch(BASE + '/actuator/health').then(r => r.status).catch(() => 'ERR')
-      )
-    );
+    const counts      = {};
+    let   firstLimited = null;   // index of first 429
+    let   retryAfter   = null;   // Retry-After seconds from header
 
-    const counts = results.reduce((acc, s) => {
-      acc[s] = (acc[s] || 0) + 1;
-      return acc;
-    }, {});
+    for (let i = 1; i <= total; i++) {
+      try {
+        // No Authorization header — triggers UNAUTH tier (30 req/min)
+        const res = await fetch(BASE + '/api/users/me');
+        const status = res.status;
+        counts[status] = (counts[status] || 0) + 1;
+
+        if (status === 429 && firstLimited === null) {
+          firstLimited = i;
+          retryAfter   = res.headers.get('Retry-After') || res.headers.get('retry-after');
+        }
+
+        // Update progress every 10 requests
+        if (i % 10 === 0) {
+          el.textContent = `⏳ Sent ${i}/${total}… (429s so far: ${counts[429] || 0})`;
+        }
+      } catch (e) {
+        counts['ERR'] = (counts['ERR'] || 0) + 1;
+      }
+    }
 
     const has429 = (counts[429] || 0) > 0;
+    const hasRetryAfter = retryAfter !== null;
+
     el.className = 'response-box ' + (has429 ? 'ok' : 'warn');
-    const summary =
-      `Results (110 requests):\n` +
-      Object.entries(counts).map(([k, v]) => `  HTTP ${k}: ${v} requests`).join('\n') +
-      (has429
-        ? '\n\n✅ Rate limiting is working! Got 429 after the first 100.'
-        : '\n\n⚠️  No 429 seen — check if RateLimitFilter is active and Valkey is running.');
-    el.textContent = summary;
-    addLog('resRateLimit', 'GET', '/actuator/health ×110', has429 ? 429 : 200, summary);
+
+    const lines = [
+      `Results (${total} sequential requests to /actuator/health):`,
+      ...Object.entries(counts).map(([k, v]) => `  HTTP ${k}: ${v} requests`),
+    ];
+
+    if (has429) {
+      lines.push(`\n✅ Rate limiting is working!`);
+      lines.push(`   First 429 at request #${firstLimited}`);
+      if (hasRetryAfter) {
+        lines.push(`   Retry-After: ${retryAfter}s ✅`);
+      } else {
+        lines.push(`   ⚠️  No Retry-After header received`);
+      }
+      lines.push(`\n📌 Check Valkey: redis-cli --scan --pattern 'rl:*'`);
+      lines.push(`   You should see keys like: rl:ip:127.0.0.1:UNAUTH`);
+    } else {
+      lines.push(`\n⚠️  No 429 received — is RateLimitFilter active and Valkey running?`);
+      lines.push(`   Try: docker compose up -d (to start Valkey)`);
+    }
+
+    el.textContent = lines.join('\n');
+    addLog('resRateLimit', 'GET', `/api/users/me (no auth) ×${total}`, has429 ? 429 : 200, lines.join('\n'));
     checkItem('chk10', has429);
+    checkItem('chk11', has429 && hasRetryAfter);
     btn.disabled = false;
   }
 
