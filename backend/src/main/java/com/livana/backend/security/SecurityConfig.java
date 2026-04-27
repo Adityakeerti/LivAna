@@ -56,8 +56,17 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
 
+                // ── Public read-only endpoints ───────────────────────────────────
+                .requestMatchers(HttpMethod.GET, "/api/listings/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/businesses/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/cities").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/amenities").permitAll()
+
                 // ── Actuator ─────────────────────────────────────────────────────
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
+                // ── Admin-only ───────────────────────────────────────────────────
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 // ── Everything else requires a valid JWT ─────────────────────────
                 .anyRequest().authenticated()
